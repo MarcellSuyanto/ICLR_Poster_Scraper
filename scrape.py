@@ -10,7 +10,7 @@ from selenium.webdriver.chrome.options import Options
 
 
 title_links = {
-    'llm': 'https://iclr2025.vizhub.ai/?brushed=%255B%255B413.3249816894531%252C-5.2112884521484375%255D%252C%255B757.7249755859375%252C379.1637268066406%255D%255D',
+    #'llm': 'https://iclr2025.vizhub.ai/?brushed=%255B%255B413.3249816894531%252C-5.2112884521484375%255D%252C%255B757.7249755859375%252C379.1637268066406%255D%255D',
     'speech': 'https://iclr2025.vizhub.ai/?brushed=%255B%255B339.5250244140625%252C46.03871154785156%255D%252C%255B429.72503662109375%252C108.56371307373047%255D%255D',
     'multimodal_models': 'https://iclr2025.vizhub.ai/?brushed=%255B%255B179.62503051757812%252C18.363710403442383%255D%252C%255B330.3000183105469%252C234.6387176513672%255D%255D',
     'agents': 'https://iclr2025.vizhub.ai/?brushed=%255B%255B678.7999877929688%252C210.03871154785156%255D%252C%255B750.5499877929688%252C383.2637023925781%255D%255D',
@@ -24,7 +24,7 @@ title_links = {
 }
 
 def initialize_driver(title):
-    download_dir = f"C:\\Users\\Marcell Suyanto\\Dropbox\\Coding\\Python\\ICLR_scrape_Posters\\{title}_POSTERS"
+    download_dir = f"C:\\Users\\Marcell Suyanto\\Dropbox\\Coding\\Python\\ICLR_scrape\\{title}"
     chrome_options = Options()
     prefs = {
         "download.default_directory": download_dir,
@@ -35,8 +35,6 @@ def initialize_driver(title):
     time.sleep(5)
     return (driver, download_dir)
 
-
-
 def get_papers(driver, title, download_dir):
     link = title_links[title]
     driver.get(link)
@@ -46,32 +44,28 @@ def get_papers(driver, title, download_dir):
     papers = driver.find_elements(By.XPATH, "//div[@class='paper svelte-ki60ov']")
     actions = ActionChains(driver)
     for paper in papers:
-        actions.key_down(Keys.SHIFT).click(paper).key_up(Keys.SHIFT).perform()
+        actions.key_down(Keys.ALT).click(paper).key_up(Keys.ALT).perform()
         WebDriverWait(driver, 10).until(EC.number_of_windows_to_be(2))
         for window_handle in driver.window_handles:
             if window_handle != main_window:
                 driver.switch_to.window(window_handle)
                 break
-        #Get Abstract
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//a[@href='#abstract_details']"))
-        )
-        abstract_button = driver.find_element(By.XPATH, "//a[@href='#abstract_details']")
-        abstract_button.click()
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//div[@id='abstract_details']/div[@class='card card-body']/div[@id='abstractExample']"))
-        )
-        abstract = driver.find_element(By.XPATH, "//div[@id='abstract_details']/div[@class='card card-body']/div[@id='abstractExample']").text
-        
-        #Get Poster
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//a[@title='Poster']"))
-        )
-        poster_button = driver.find_element(By.XPATH, "//a[@title='Poster']")
-        poster_button.click()
-        
+        tab_link = driver.current_url
+        pdf_id = tab_link.split('?')[-1]
+        pdf_link = 'https://openreview.net/pdf?' + pdf_id
+        print("PDF Link:", pdf_link)
+        driver.get(pdf_link)
+        def wait_for_download(directory):
+            dl_wait = True
+            while dl_wait:
+                time.sleep(1)
+                dl_wait = False
+                for fname in os.listdir(directory):
+                    if fname.endswith(".crdownload"):
+                        dl_wait = True
+            return not dl_wait
 
-        #Get Slides (if any)
+        finished = wait_for_download(download_dir)
         driver.close()
         driver.switch_to.window(main_window)
 
